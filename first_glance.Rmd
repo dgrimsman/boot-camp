@@ -102,6 +102,8 @@ astarSearch(coex)
 
 - [Computational Geometry in Python](http://blancosilva.github.io/post/2014/10/28/Computational-Geometry-in-Python.html#convex-hulls)
 
+- [Triangle: .poly files](http://www.cs.cmu.edu/~quake/triangle.poly.html)
+
 ```{r}
 library(RTriangle)
 
