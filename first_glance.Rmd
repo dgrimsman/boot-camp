@@ -11,9 +11,28 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Questions
+## Scientific Questions
 
-- 
+What kind of questions and results are we looking for?
+
+- Q: How can we improve routing from a simple grid?
+  
+  - A: [Generic] Use triangulated network. Compare distances between start/end points.
+  
+  - A: [Application] Compare with extra whale risk conserved & less shipping distance traversed for this example. Results:
+  
+    - Show boxplot of grid vs triangulated routing and efficiencies gained on y axis for whales & shipping
+    
+    - Show plot of how parameter for triangulation (like angle) on x-axis changes, how efficincies are gained in whale conservation / shipping distance on y-axis 
+    
+    - Showing the Shiny app before/after this new routing mechanism. Embedded as a HTML slideshow.
+  
+- Q: How can we improve routing from a simple grid?
+
+
+## Technical Questions
+
+Let's try to use <https://github.com/dgrimsman/boot-camp/issues>.
 
 ## Data
 
@@ -125,4 +144,5 @@ plot(t_ply)
 
 ## R Tips Background
 
-- 
+- [HTML Documents - rmarkdown](http://rmarkdown.rstudio.com/html_document_format.html#code_folding)
+
