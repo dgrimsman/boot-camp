@@ -1,0 +1,67 @@
+---
+title: "first_glance"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Questions
+
+- 
+
+## Data
+
+British Columbia (BC)
+
+- land: `bc_spp_gcs.shp`
+- whales: `v72zw_epsg3857.grd`
+
+
+### raster of whale hot spots
+
+```{r whales, message=F}
+library(raster) # install.packages('rgdal')
+
+whales = raster('data/v72zw_epsg3857.grd')
+plot(whales)
+```
+
+### ports to route between
+
+```{r ports, message=FALSE}
+library(readr)
+
+ports = read_csv('data/ports_bc.csv')
+```
+
+
+### interactive map
+
+```{r}
+library(leaflet)
+
+leaflet() %>%
+  addProviderTiles("Stamen.TonerLite", options = providerTileOptions(noWrap = TRUE)) %>% 
+  addRasterImage(
+    whales, opacity = 0.8, project = F, group='Raster',
+    colors = colorNumeric(
+      palette = 'Reds', domain = c(cellStats(whales, 'min'), cellStats(whales, 'max')), 
+      na.color = "#00000000", alpha = TRUE)) %>%
+  addCircleMarkers(
+    ~lon, ~lat, color='blue', data=ports, layerId=~name, group='Ports',
+    popup = ~sprintf('<b>%s</b><br>%0.2f, %0.2f', name, lon, lat)) %>%
+  addLayersControl(
+    overlayGroups = c('Raster', 'Ports'),
+    options = layersControlOptions(collapsed=T))
+```
+
+
+## R Tips Background
+
+- 
