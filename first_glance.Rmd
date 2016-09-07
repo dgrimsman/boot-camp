@@ -22,7 +22,6 @@ British Columbia (BC)
 - land: `bc_spp_gcs.shp`
 - whales: `v72zw_epsg3857.grd`
 
-
 ### raster of whale hot spots
 
 ```{r whales, message=F}
@@ -60,6 +59,68 @@ leaflet() %>%
     overlayGroups = c('Raster', 'Ports'),
     options = layersControlOptions(collapsed=T))
 ```
+
+## Testing New Packages
+
+### RBGL
+
+```{r install, eval=FALSE}
+source("https://bioconductor.org/biocLite.R")
+biocLite("RBGL")
+```
+
+```{r}
+library(RBGL)
+
+# astar search
+con <- file(system.file("XML/dijkex.gxl",package="RBGL"), open="r")
+coex <- fromGXL(con)
+close(con)
+astarSearch(coex)
+```
+
+### RTriangle
+
+- [Computational Geometry in Python](http://blancosilva.github.io/post/2014/10/28/Computational-Geometry-in-Python.html#convex-hulls)
+
+```{r}
+library(RTriangle)
+
+## Create an object with a concavity
+p <- pslg(P=rbind(c(0, 0), c(0, 1), c(0.5, 0.5), c(1, 1), c(1, 0)),
+          S=rbind(c(1, 2), c(2, 3), c(3, 4), c(4, 5), c(5, 1)))
+
+## Plot it
+plot(p)
+
+## Triangulate it
+tp <- triangulate(p)
+plot(tp)
+
+## Load a data set containing a hole
+A <- read.pslg(file.path(system.file(package = "RTriangle"), "extdata", "A.poly"))
+plot(A)
+## Triangulate the PSLG
+tA <- triangulate(A)
+plot(tA)
+## Triangulate the PSLG with triangles in which no angle
+## is smaller than 20 degrees
+tA <- triangulate(A, q=20)
+plot(tA)
+## Triangulate the PSLG with triangles in which no triangle has 
+## area greater than 0.001
+tA <- triangulate(A, a=0.001)
+plot(tA)
+
+source('custom.R')
+ply = read.pslg('data/superior.poly')
+plot(ply)
+t_ply <- triangulate(ply)
+plot(t_ply)
+t_ply <- triangulate(ply, q=20, D=T) # 'pq20D'
+plot(t_ply)
+```
+
 
 
 ## R Tips Background
