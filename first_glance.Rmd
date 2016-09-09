@@ -1,10 +1,13 @@
 ---
 title: "first_glance"
+bibliography: boot-camp.bib
+csl: poetics.csl
 output:
   html_document:
     toc: true
     toc_float: true
     code_folding: hide
+    
 ---
 
 ```{r setup, include=FALSE}
@@ -12,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Scientific Questions
+
+Routing algorithms in the ocean are hard [@christiansen_ship_2004].
 
 What kind of questions and results are we looking for?
 
@@ -147,4 +152,9 @@ plot(t_ply)
 ## R Tips Background
 
 - [HTML Documents - rmarkdown](http://rmarkdown.rstudio.com/html_document_format.html#code_folding)
+- [Bibliographies and Citations](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
+- [bbest/rmarkdown-example: R Markdown example showing figures & tables with captions, equations, inline R values and references with a Zotero library](https://github.com/bbest/rmarkdown-example)
+
+
+## References
 
