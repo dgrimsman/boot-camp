@@ -1,10 +1,13 @@
 ---
 title: "first_glance"
+bibliography: boot-camp.bib
+csl: poetics.csl
 output:
   html_document:
     toc: true
     toc_float: true
     code_folding: hide
+    
 ---
 
 ```{r setup, include=FALSE}
@@ -12,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Scientific Questions
+
+Routing algorithms in the ocean are hard [@christiansen_ship_2004].
 
 What kind of questions and results are we looking for?
 
@@ -146,9 +151,73 @@ t_ply <- triangulate(ply, q=20, D=T) # 'pq20D'
 plot(t_ply)
 ```
 
+## Triangulate BC
+
+[Triangularize BC raster · Issue #1 · dgrimsman/boot-camp](https://github.com/dgrimsman/boot-camp/issues/1)
+
+### Get Extent Polygon of Raster
+
+```{r create bc.geojson, eval=FALSE}
+whales_1 = whales
+whales_1[!is.na(whales_1)] = 1
+plot(whales_1)
+whales_p = rasterToPolygons(whales_1, n=8, na.rm=T, digits=12, dissolve=T)
+plot(whales_p)
+
+writeOGR(whales)
+library(rgdal)
+writeOGR(whales_p, 'data/bc', layer='layer', driver='GeoJSON')
+file.rename('data/bc','data/bc.geojson')
+```
+
+```{r, eval=F}
+library(rgeos)
+library(RTriangle)
+library(dplyr)
+
+whales_p = readOGR(dsn='data/bc.geojson', layer='OGRGeoJSON')
+
+names(whales_p)
+slotNames(whales_p)
+whales_p@polygons
+
+vertices = data_frame(i=numeric(), x=numeric(), y=numeric())
+for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1]]@Polygons[1]
+  vertices = bind_rows(
+    vertices,
+    a = whales_p@polygons[[1]]@Polygons[[i]]@coords %>%
+      as.data.frame() %>%
+      mutate(i = i))
+}
+
+# http://www.cs.cmu.edu/~quake/triangle.poly.html
+# DONE: @bbest
+# First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
+# Following lines: <vertex #> <x> <y> [attributes] [boundary marker]
+poly = 'data/bc.poly'
+write_file(sprintf('%d 2 0 0\n', nrow(vertices)), poly)
+for (i in 1:nrow(vertices)){ # i =1
+  row = vertices[i,]
+  write_file(sprintf('%d %g %g\n', i, row$x, row$y), poly, append=T)
+}
+
+# TODO: @dgrimsman
+# One line: <# of segments> <# of boundary markers (0 or 1)>
+# Following lines: <segment #> <endpoint> <endpoint> [boundary marker]
+
+#bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
+#plot(bc_poly)
+#bc_poly <- triangulate(ply, q=20, D=T) # 'pq20D'
+#plot(bc_poly)
+```
 
 
 ## R Tips Background
 
 - [HTML Documents - rmarkdown](http://rmarkdown.rstudio.com/html_document_format.html#code_folding)
+- [Bibliographies and Citations](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
+- [bbest/rmarkdown-example: R Markdown example showing figures & tables with captions, equations, inline R values and references with a Zotero library](https://github.com/bbest/rmarkdown-example)
+
+
+## References
 
