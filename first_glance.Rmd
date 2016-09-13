@@ -200,8 +200,9 @@ for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1
     a = whales_p@polygons[[1]]@Polygons[[i]]@coords %>%
       as.data.frame() %>%
       mutate(i = i))
-  vertices = head(vertices, -1) 
-  num_vert = dim(whales_p@polygons[[1]]@Polygons[[i]]@coords)[1]
+  vertices = head(vertices, -1) # because last vertex is redundant
+  
+  num_vert = dim(whales_p@polygons[[1]]@Polygons[[i]]@coords)[1] - 1
   fin_v = start_v + num_vert - 1
   start = c(start_v:fin_v)
   fin = c((start_v + 1):fin_v, start_v)
@@ -232,6 +233,21 @@ for (i in 1:nrow(segments)){ # i =1
   write_file(sprintf('%d %g %g\n', i, row$start, row$fin), poly, append=T)
 }
 
+# TODO: @dgrimsman
+# One line: <# of holes>
+# Following lines: <hole #> <x> <y>
+library(sp)
+# holes = data_frame(i=numeric(), x=numeric(), y=numeric())
+write_file(sprintf('%d', length(whales_p@polygons[[1]]@Polygons)), poly, append=T)
+for (i in 1:length(whales_p@polygons[[1]]@Polygons)){
+  p = whales_p@polygons[[1]]@Polygons[[i]]
+  hole_coord = spsample(p, 1, type = "random")@coords
+  x = hole_coord[1, 1]
+  y = hole_coord[1, 2]
+  # holes = rbind(holes, c(i, hole_coord[1, 1], hole_coord[1, 2]))
+  write_file(sprintf('%d %g %g\n', i, x, y), poly, append=T)
+}
+
 #bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
 #plot(bc_poly)
 #bc_poly <- triangulate(ply, q=20, D=T) # 'pq20D'
@@ -239,12 +255,11 @@ for (i in 1:nrow(segments)){ # i =1
 ```
 
 ```{r}
-
-n = c(2, 3, 5) 
-s = c("aa", "bb", "cc") 
-b = c(TRUE, FALSE, TRUE) 
-df = data.frame(n, s, b) 
-print(df)
+# david's little test area
+  for (i in 1:length(whales_p@polygons[[1]]@Polygons)){
+    p = whales_p@polygons[[1]]@Polygons[[i]]
+    print(sprintf('# vertices: %d, area: %f', dim(p@coords)[1], p@area/1e6))
+  }
 ```
 
 ## R Tips Background
