@@ -254,13 +254,6 @@ for (i in 1:length(whales_p@polygons[[1]]@Polygons)){
 #plot(bc_poly)
 ```
 
-```{r}
-# david's little test area
-  for (i in 1:length(whales_p@polygons[[1]]@Polygons)){
-    p = whales_p@polygons[[1]]@Polygons[[i]]
-    print(sprintf('# vertices: %d, area: %f', dim(p@coords)[1], p@area/1e6))
-  }
-```
 
 ## R Tips Background
 
