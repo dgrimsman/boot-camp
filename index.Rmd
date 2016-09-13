@@ -97,7 +97,7 @@ source("https://bioconductor.org/biocLite.R")
 biocLite("RBGL")
 ```
 
-```{r}
+```{r RBGL not working, eval=F}
 library(RBGL)
 
 # astar search
@@ -115,6 +115,11 @@ astarSearch(coex)
 
 ```{r}
 library(RTriangle)
+library(rgdal)
+library(rgeos)
+library(RTriangle)
+library(dplyr)
+triangulate = RTriangle::triangulate # override rgeos::triangulate
 
 ## Create an object with a concavity
 p <- pslg(P=rbind(c(0, 0), c(0, 1), c(0.5, 0.5), c(1, 1), c(1, 0)),
@@ -165,21 +170,16 @@ whales_p = rasterToPolygons(whales_1, n=8, na.rm=T, digits=12, dissolve=T)
 plot(whales_p)
 
 writeOGR(whales)
-library(rgdal)
 writeOGR(whales_p, 'data/bc', layer='layer', driver='GeoJSON')
 file.rename('data/bc','data/bc.geojson')
 ```
 
-```{r, eval=F}
-library(rgeos)
-library(RTriangle)
-library(dplyr)
-
+```{r bc.poly pt 1, eval=F}
 whales_p = readOGR(dsn='data/bc.geojson', layer='OGRGeoJSON')
 
-names(whales_p)
-slotNames(whales_p)
-whales_p@polygons
+#names(whales_p)
+#slotNames(whales_p)
+#whales_p@polygons
 
 # vertices = data_frame(i=numeric(), x=numeric(), y=numeric())
 # for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1]]@Polygons[1]
@@ -195,6 +195,10 @@ segments = data_frame(i=numeric(), start=numeric(), fin=numeric())
 start_v = 1
 fin_v = 1
 for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1]]@Polygons[1]
+  p = whales_p@polygons[[1]]@Polygons[[i]]
+  if (p@area < 1e10){
+    next
+  }
   vertices = bind_rows(
     vertices,
     a = whales_p@polygons[[1]]@Polygons[[i]]@coords %>%
@@ -213,6 +217,11 @@ for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1
   start_v = fin_v + 1
 }
 
+idx = which(duplicated(vertices[,c('V1','V2')]))
+vertices$V1[idx] = vertices$V1[idx] + runif(length(idx), min=0.01, max=0.03)
+```
+
+```{r bc.poly pt 2, eval=F}
 # http://www.cs.cmu.edu/~quake/triangle.poly.html
 # DONE: @bbest
 # First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
@@ -221,7 +230,7 @@ poly = 'data/bc.poly'
 write_file(sprintf('%d 2 0 0\n', nrow(vertices)), poly)
 for (i in 1:nrow(vertices)){ # i =1
   row = vertices[i,]
-  write_file(sprintf('%d %g %g\n', i, row$V1, row$V2), poly, append=T)
+  write_file(sprintf('%d %0.2f %0.2f\n', i, row$V1, row$V2), poly, append=T)
 }
 
 # DONE: @dgrimsman
@@ -236,22 +245,30 @@ for (i in 1:nrow(segments)){ # i =1
 # TODO: @dgrimsman
 # One line: <# of holes>
 # Following lines: <hole #> <x> <y>
-library(sp)
-# holes = data_frame(i=numeric(), x=numeric(), y=numeric())
-write_file(sprintf('%d', length(whales_p@polygons[[1]]@Polygons)), poly, append=T)
-for (i in 1:length(whales_p@polygons[[1]]@Polygons)){
-  p = whales_p@polygons[[1]]@Polygons[[i]]
-  hole_coord = spsample(p, 1, type = "random")@coords
-  x = hole_coord[1, 1]
-  y = hole_coord[1, 2]
-  # holes = rbind(holes, c(i, hole_coord[1, 1], hole_coord[1, 2]))
-  write_file(sprintf('%d %g %g\n', i, x, y), poly, append=T)
-}
+# library(sp)
+# # holes = data_frame(i=numeric(), x=numeric(), y=numeric())
+# write_file(sprintf('%d\n', length(whales_p@polygons[[1]]@Polygons) - 1), poly, append=T)
+# j = 1
+# for (i in 1:length(whales_p@polygons[[1]]@Polygons)){
+#   p = whales_p@polygons[[1]]@Polygons[[i]]
+#   if (p@area <1e10){
+#     hole_coord = p@labpt
+#     x = hole_coord[1]
+#     y = hole_coord[2]
+#     # holes = rbind(holes, c(i, hole_coord[1, 1], hole_coord[1, 2]))
+#     write_file(sprintf('%d %g %g\n', j, x, y), poly, append=T)
+#     j = j + 1
+#   }
+# }
 
-#bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
-#plot(bc_poly)
-#bc_poly <- triangulate(ply, q=20, D=T) # 'pq20D'
-#plot(bc_poly)
+write_file(sprintf('%d\n', 0), poly, append=T)
+```
+
+```{r triangulate}
+bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
+plot(bc_poly)
+bc_poly_tri <- triangulate(bc_poly, q=20, D=T) # 'pq20D'
+plot(bc_poly_tri)
 ```
 
 

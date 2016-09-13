@@ -1,4 +1,5 @@
 read.pslg = function (file) {
+  # file = "data/bc.poly"
   dat <- scan(file, quiet = TRUE)
   N.vert <- dat[1]
   N.dims <- dat[2]
@@ -42,8 +43,10 @@ read.pslg = function (file) {
   N.hole <- dat[offset + 1]
   offset <- offset + 1
   H <- matrix(NA, N.hole, 2)
-  for (i in (1:N.hole)) {
-    H[i, ] <- dat[offset + ((i - 1) * 2) + (2:3)]
+  if (N.hole > 0){
+    for (i in (1:N.hole)) {
+      H[i, ] <- dat[offset + ((i - 1) * 2) + (2:3)]
+    }
   }
   return(pslg(P = P, PA = PA, PB = PB, S = S, H = H))
 }
