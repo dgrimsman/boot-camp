@@ -181,13 +181,35 @@ names(whales_p)
 slotNames(whales_p)
 whales_p@polygons
 
+# vertices = data_frame(i=numeric(), x=numeric(), y=numeric())
+# for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1]]@Polygons[1]
+#   vertices = bind_rows(
+#     vertices,
+#     a = whales_p@polygons[[1]]@Polygons[[i]]@coords %>%
+#       as.data.frame() %>%
+#       mutate(i = i))
+# }
+
 vertices = data_frame(i=numeric(), x=numeric(), y=numeric())
+segments = data_frame(i=numeric(), start=numeric(), fin=numeric())
+start_v = 1
+fin_v = 1
 for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1]]@Polygons[1]
   vertices = bind_rows(
     vertices,
     a = whales_p@polygons[[1]]@Polygons[[i]]@coords %>%
       as.data.frame() %>%
       mutate(i = i))
+  vertices = head(vertices, -1) 
+  num_vert = dim(whales_p@polygons[[1]]@Polygons[[i]]@coords)[1]
+  fin_v = start_v + num_vert - 1
+  start = c(start_v:fin_v)
+  fin = c((start_v + 1):fin_v, start_v)
+  segments = bind_rows(
+    segments,
+    a = data_frame(start, fin))
+  segments$i<-seq.int(nrow(segments))
+  start_v = fin_v + 1
 }
 
 # http://www.cs.cmu.edu/~quake/triangle.poly.html
@@ -198,12 +220,17 @@ poly = 'data/bc.poly'
 write_file(sprintf('%d 2 0 0\n', nrow(vertices)), poly)
 for (i in 1:nrow(vertices)){ # i =1
   row = vertices[i,]
-  write_file(sprintf('%d %g %g\n', i, row$x, row$y), poly, append=T)
+  write_file(sprintf('%d %g %g\n', i, row$V1, row$V2), poly, append=T)
 }
 
-# TODO: @dgrimsman
+# DONE: @dgrimsman
 # One line: <# of segments> <# of boundary markers (0 or 1)>
 # Following lines: <segment #> <endpoint> <endpoint> [boundary marker]
+write_file(sprintf('%d 0\n', nrow(segments)), poly, append=T)
+for (i in 1:nrow(segments)){ # i =1
+  row = segments[i,]
+  write_file(sprintf('%d %g %g\n', i, row$start, row$fin), poly, append=T)
+}
 
 #bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
 #plot(bc_poly)
@@ -211,6 +238,14 @@ for (i in 1:nrow(vertices)){ # i =1
 #plot(bc_poly)
 ```
 
+```{r}
+
+n = c(2, 3, 5) 
+s = c("aa", "bb", "cc") 
+b = c(TRUE, FALSE, TRUE) 
+df = data.frame(n, s, b) 
+print(df)
+```
 
 ## R Tips Background
 
