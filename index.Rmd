@@ -119,6 +119,8 @@ library(rgdal)
 library(rgeos)
 library(RTriangle)
 library(dplyr)
+library(Matrix)
+library(igraph)
 triangulate = RTriangle::triangulate # override rgeos::triangulate
 
 ## Create an object with a concavity
@@ -269,6 +271,24 @@ bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
 plot(bc_poly)
 bc_poly_tri <- triangulate(bc_poly, q=20, D=T) # 'pq20D'
 plot(bc_poly_tri)
+```
+
+```{r shortest}
+# create adjacency matrix
+num_v_tri = dim(bc_poly_tri$P)[1]
+adj_mat <- Matrix(0, nrow = num_v_tri, ncol = num_v_tri, sparse=TRUE)
+for (i in 1:dim(bc_poly_tri$E)[1]){
+  edge = bc_poly_tri$E[i,]
+  p1 = edge[1]
+  p2 = edge[2]
+  d = sqrt((bc_poly_tri$P[p1][1] - bc_poly_tri$P[p2][1])^2 + (bc_poly_tri$P[p1][2] - bc_poly_tri$P[p2][2])^2)
+  adj_mat[p1, p2] = d
+  adj_mat[p2, p1] = d
+}
+
+#create graph and find shortest path
+graph = graph_from_adjacency_matrix(adj_mat, weighted=TRUE, mode="undirected")
+path = shortest_paths(graph, 1, 1000)
 ```
 
 
