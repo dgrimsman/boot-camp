@@ -121,6 +121,8 @@ library(RTriangle)
 library(dplyr)
 library(Matrix)
 library(igraph)
+library(sp)
+library(gdistance)
 triangulate = RTriangle::triangulate # override rgeos::triangulate
 
 ## Create an object with a concavity
@@ -201,26 +203,27 @@ for (i in 1:length(whales_p@polygons[[1]]@Polygons)){ # p = whales_p@polygons[[1
   if (p@area < 1e10){
     next
   }
-  vertices = bind_rows(
-    vertices,
-    a = whales_p@polygons[[1]]@Polygons[[i]]@coords %>%
-      as.data.frame() %>%
-      mutate(i = i))
+  
+  # save vertices
+  coords = rename(as.data.frame(p@coords), c('V1'='x', 'V2'='y'))
+  vertices = bind_rows(vertices, coords)
   vertices = head(vertices, -1) # because last vertex is redundant
   
-  num_vert = dim(whales_p@polygons[[1]]@Polygons[[i]]@coords)[1] - 1
+  #save segments
+  num_vert = dim(p@coords)[1] - 1
   fin_v = start_v + num_vert - 1
   start = c(start_v:fin_v)
   fin = c((start_v + 1):fin_v, start_v)
   segments = bind_rows(
     segments,
     a = data_frame(start, fin))
-  segments$i<-seq.int(nrow(segments))
   start_v = fin_v + 1
 }
+vertices$i<-seq.int(nrow(vertices))
+segments$i<-seq.int(nrow(segments))
 
-idx = which(duplicated(vertices[,c('V1','V2')]))
-vertices$V1[idx] = vertices$V1[idx] + runif(length(idx), min=0.01, max=0.03)
+idx = which(duplicated(vertices[,c('x','y')]))
+vertices$x[idx] = vertices$y[idx] + runif(length(idx), min=0.01, max=0.03)
 ```
 
 ```{r bc.poly pt 2, eval=F}
@@ -232,7 +235,7 @@ poly = 'data/bc.poly'
 write_file(sprintf('%d 2 0 0\n', nrow(vertices)), poly)
 for (i in 1:nrow(vertices)){ # i =1
   row = vertices[i,]
-  write_file(sprintf('%d %0.2f %0.2f\n', i, row$V1, row$V2), poly, append=T)
+  write_file(sprintf('%d %0.2f %0.2f\n', i, row$x, row$y), poly, append=T)
 }
 
 # DONE: @dgrimsman
@@ -247,7 +250,6 @@ for (i in 1:nrow(segments)){ # i =1
 # TODO: @dgrimsman
 # One line: <# of holes>
 # Following lines: <hole #> <x> <y>
-# library(sp)
 # # holes = data_frame(i=numeric(), x=numeric(), y=numeric())
 # write_file(sprintf('%d\n', length(whales_p@polygons[[1]]@Polygons) - 1), poly, append=T)
 # j = 1
@@ -288,7 +290,20 @@ for (i in 1:dim(bc_poly_tri$E)[1]){
 
 #create graph and find shortest path
 graph = graph_from_adjacency_matrix(adj_mat, weighted=TRUE, mode="undirected")
-path = shortest_paths(graph, 1, 1000)
+path_tri = shortest_paths(graph, 1, 1000)
+```
+
+```{r eval=F}
+# ones map for getting linear path
+r1 = whales
+r1[!is.na(whales)] = 1
+
+path_grid = shortestPath(
+    geoCorrection(transition(1 / r1, mean, directions=8)), 
+    #geoCorrection(transition(1 / (r1), mean, directions=8), type="c"), 
+    SpatialPoints(vertices[1, c('x', 'y')]),
+    SpatialPoints(vertices[18000, c('x', 'y')]),
+    output='SpatialLines')
 ```
 
 
