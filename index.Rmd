@@ -269,6 +269,8 @@ write_file(sprintf('%d\n', 0), poly, append=T)
 ```
 
 ```{r triangulate}
+library(RTriangle)
+source('custom.R')
 bc_poly = read.pslg('data/bc.poly') # not yet working b/c segments needed
 plot(bc_poly)
 bc_poly_tri <- triangulate(bc_poly, q=20, D=T) # 'pq20D'
@@ -276,42 +278,34 @@ plot(bc_poly_tri)
 ```
 
 ```{r shortest}
-# create adjacency matrix
-num_v_tri = dim(bc_poly_tri$P)[1]
-adj_mat <- Matrix(0, nrow = num_v_tri, ncol = num_v_tri, sparse=TRUE)
-for (i in 1:dim(bc_poly_tri$E)[1]){
-  edge = bc_poly_tri$E[i,]
-  p1 = edge[1]
-  p2 = edge[2]
-  d = sqrt((bc_poly_tri$P[p1, 1] - bc_poly_tri$P[p2, 1])^2 + (bc_poly_tri$P[p1, 2] - bc_poly_tri$P[p2, 2])^2)
-  adj_mat[p1, p2] = d
-  adj_mat[p2, p1] = d
+library(igraph)
+library(Matrix)
+
+adj_mat_txt = 'data/adj_mat.txt'
+
+if (!file.exists(adj_mat_txt)){
+  
+  # create adjacency matrix
+  num_v_tri = dim(bc_poly_tri$P)[1]
+  adj_mat <- Matrix(0, nrow = num_v_tri, ncol = num_v_tri, sparse=TRUE)
+  for (i in 1:dim(bc_poly_tri$E)[1]){
+    edge = bc_poly_tri$E[i,]
+    p1 = edge[1]
+    p2 = edge[2]
+    d = sqrt((bc_poly_tri$P[p1, 1] - bc_poly_tri$P[p2, 1])^2 + (bc_poly_tri$P[p1, 2] - bc_poly_tri$P[p2, 2])^2)
+    adj_mat[p1, p2] = d
+    adj_mat[p2, p1] = d
+  }
+  writeMM(adj_mat,file=adj_mat_txt)
+  
+} else {
+  
+  # read existing
+  readMM(adj_mat_txt)
 }
 
-#create graph and find shortest path
-graph = graph_from_adjacency_matrix(adj_mat, weighted=TRUE, mode="undirected")
-pts_tri = rename(as.data.frame(bc_poly_tri$P), c('V1'='x', 'V2'='y'))
-pts_tri$dist_start = sqrt((pts_tri$x - xy@coords[1,1])^2 + (pts_tri$y - xy@coords[1,2])^2)
-pts_tri$dist_end = sqrt((pts_tri$x - xy@coords[2,1])^2 + (pts_tri$y - xy@coords[2,2])^2)
-start_pt = as.numeric(rownames(pts_tri[order(pts_tri$dist_start),])[1])
-end_pt = as.numeric(rownames(pts_tri[order(pts_tri$dist_end),])[1])
-path_tri = shortest_paths(graph, start_pt, end_pt)
-dist_tri = 0
-prev_pt = path_tri$vpath[[1]][1]
-for (i in 2:length(path_tri$vpath[[1]])){
-  pt = path_tri$vpath[[1]][i]
-  dist_tri = dist_tri + adj_mat[pt, prev_pt]
-  print(adj_mat[pt, prev_pt])
-  break
-  prev_pt = pt
-}
-```
-
-```{r eval=F}
-# ones map for getting linear path
-r1 = whales
-r1[!is.na(whales)] = 1
-
+library(sp)
+library(raster)
 lonlat1 = SpatialPoints(data.frame(-127.08, 50.59))
 lonlat2 = SpatialPoints(data.frame(-130.32, 54.31))
 
@@ -319,6 +313,49 @@ xy = c(coordinates(lonlat1), coordinates(lonlat2)) %>%
       matrix(ncol=2, byrow=T) %>%
       SpatialPoints(crs("+init=epsg:4326")) %>%
       spTransform(crs("+init=epsg:3857"))
+
+#create graph and find shortest path
+graph = graph_from_adjacency_matrix(adj_mat, weighted=TRUE, mode="undirected")
+pts_tri = plyr::rename(as.data.frame(bc_poly_tri$P), c('V1'='x', 'V2'='y'))
+pts_tri$dist_start = sqrt((pts_tri$x - xy@coords[1,1])^2 + (pts_tri$y - xy@coords[1,2])^2)
+pts_tri$dist_end = sqrt((pts_tri$x - xy@coords[2,1])^2 + (pts_tri$y - xy@coords[2,2])^2)
+start_pt = as.numeric(rownames(pts_tri[order(pts_tri$dist_start),])[1])
+end_pt = as.numeric(rownames(pts_tri[order(pts_tri$dist_end),])[1])
+#path_tri = shortest_paths(graph, start_pt, end_pt)
+path_tri = shortest_paths(graph, start_pt, end_pt)
+
+# start line with first node in path
+
+# iterate through nodes in path
+dist_tri = 0
+prev_pt = as.numeric(path_tri$vpath[[1]][1])
+ln_xy = data_frame(
+  x=bc_poly_tri$P[prev_pt,1], 
+  y=bc_poly_tri$P[prev_pt,2])
+for (i in 2:length(path_tri$vpath[[1]])){ # i=2
+  pt = as.numeric(path_tri$vpath[[1]][i])
+  
+  # bind node coordinates into row of line
+  ln_xy = rbind(
+    ln_xy,
+    data_frame(
+      x=bc_poly_tri$P[pt,1], 
+      y=bc_poly_tri$P[pt,2]))
+  
+  # update distance from adjacency matrix
+  dist_tri = dist_tri + adj_mat[pt, prev_pt]
+  
+  cat(sprintf('%d -> %d: %g\n', pt, prev_pt, adj_mat[pt, prev_pt]))
+  prev_pt = pt
+}
+path_tri_ln = SpatialLines(list(Lines(Line(ln_xy), ID="a")))
+cat(sprintf('TOTAL length: %g\n', dist_tri))
+```
+
+```{r eval=F}
+# ones map for getting linear path
+r1 = whales
+r1[!is.na(whales)] = 1
 
 # update to nearest non-NA points on raster for shortestPath to work
 xy = c(
@@ -346,6 +383,42 @@ for (i in 2:dim(coords)[1]){
 }
 ```
 
+
+## Results
+
+
+- plot for single path comparing raster vs vector paths, 2 panels (L, R):
+  - Left: raster network with path (nodes = #, dist = #)
+  - Right: triangulated network with path (nodes = #, dist = #)
+  - We're using fewer nodes to extract shorter paths.
+
+```{r}
+# zoom
+plot(raster::rasterToPoints(r1), pch=20, xlim=-14)
+
+plot(whales)
+
+plot(whales, xlim = c(-14257523, -14121332), ylim = c(6547005, 6647474))
+
+#dir.create('plots')
+png('plots/grid-path_zoom.png')
+plot(raster::rasterToPoints(r1), pch=20, xlim = c(-14257523, -14121332), ylim = c(6547005, 6647474), cex=0.2)
+plot(path_grid, col='green', lwd=5, add=T)
+legend('topright', sprintf('n=%s\nd=%s', scales::comma(cellStats(r1, 'sum')), scales::comma(dist_grid)))
+dev.off()
+
+# raster::drawExtent() xlim = c(-14257523, -14121332), ylim = c(6551470, 6647474)
+
+plot(bc_poly_tri, xlim = c(-14257523, -14121332), ylim = c(6547005, 6647474))
+plot(path_tri_ln, col='blue', lwd=5, add=T)
+legend('topright', sprintf('n=%s\nd=%s', scales::comma(dim(bc_poly_tri$P)[1]), scales::comma(dist_tri)))
+```
+
+
+  
+- run between different ports: get difference b/n methods & order -/+, then isolate a few of the outlier paths in either direction
+
+- table of computational time
 
 ## R Tips Background
 
