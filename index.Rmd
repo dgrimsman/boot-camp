@@ -283,15 +283,28 @@ for (i in 1:dim(bc_poly_tri$E)[1]){
   edge = bc_poly_tri$E[i,]
   p1 = edge[1]
   p2 = edge[2]
-  d = sqrt((bc_poly_tri$P[p1][1] - bc_poly_tri$P[p2][1])^2 + (bc_poly_tri$P[p1][2] - bc_poly_tri$P[p2][2])^2)
+  d = sqrt((bc_poly_tri$P[p1, 1] - bc_poly_tri$P[p2, 1])^2 + (bc_poly_tri$P[p1, 2] - bc_poly_tri$P[p2, 2])^2)
   adj_mat[p1, p2] = d
   adj_mat[p2, p1] = d
 }
 
 #create graph and find shortest path
 graph = graph_from_adjacency_matrix(adj_mat, weighted=TRUE, mode="undirected")
-path_tri = shortest_paths(graph, 1, 1000)
-
+pts_tri = rename(as.data.frame(bc_poly_tri$P), c('V1'='x', 'V2'='y'))
+pts_tri$dist_start = sqrt((pts_tri$x - xy@coords[1,1])^2 + (pts_tri$y - xy@coords[1,2])^2)
+pts_tri$dist_end = sqrt((pts_tri$x - xy@coords[2,1])^2 + (pts_tri$y - xy@coords[2,2])^2)
+start_pt = as.numeric(rownames(pts_tri[order(pts_tri$dist_start),])[1])
+end_pt = as.numeric(rownames(pts_tri[order(pts_tri$dist_end),])[1])
+path_tri = shortest_paths(graph, start_pt, end_pt)
+dist_tri = 0
+prev_pt = path_tri$vpath[[1]][1]
+for (i in 2:length(path_tri$vpath[[1]])){
+  pt = path_tri$vpath[[1]][i]
+  dist_tri = dist_tri + adj_mat[pt, prev_pt]
+  print(adj_mat[pt, prev_pt])
+  break
+  prev_pt = pt
+}
 ```
 
 ```{r eval=F}
@@ -320,7 +333,17 @@ path_grid = shortestPath(
     xy[1],
     xy[2],
     output='SpatialLines')
-plot(path_grid)
+#plot(path_grid)
+
+#get the length of the path
+coords = path_grid@lines[[1]]@Lines[[1]]@coords
+dist_grid = 0
+prev_pt = coords[1,]
+for (i in 2:dim(coords)[1]){
+  pt = coords[i,]
+  dist_grid = dist_grid + sqrt((pt[1] - prev_pt[1])^2 + (pt[2] - prev_pt[2])^2)
+  prev_pt = pt
+}
 ```
 
 
