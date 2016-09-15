@@ -291,6 +291,7 @@ for (i in 1:dim(bc_poly_tri$E)[1]){
 #create graph and find shortest path
 graph = graph_from_adjacency_matrix(adj_mat, weighted=TRUE, mode="undirected")
 path_tri = shortest_paths(graph, 1, 1000)
+
 ```
 
 ```{r eval=F}
@@ -298,12 +299,28 @@ path_tri = shortest_paths(graph, 1, 1000)
 r1 = whales
 r1[!is.na(whales)] = 1
 
+lonlat1 = SpatialPoints(data.frame(-127.08, 50.59))
+lonlat2 = SpatialPoints(data.frame(-130.32, 54.31))
+
+xy = c(coordinates(lonlat1), coordinates(lonlat2)) %>%
+      matrix(ncol=2, byrow=T) %>%
+      SpatialPoints(crs("+init=epsg:4326")) %>%
+      spTransform(crs("+init=epsg:3857"))
+
+# update to nearest non-NA points on raster for shortestPath to work
+xy = c(
+  coordinates(r1)[which.min(mask(distanceFromPoints(r1, xy[1]), r1)),],
+  coordinates(r1)[which.min(mask(distanceFromPoints(r1, xy[2]), r1)),]) %>%
+  matrix(ncol=2, byrow=T) %>%
+  SpatialPoints(crs("+init=epsg:3857"))
+
 path_grid = shortestPath(
-    geoCorrection(transition(1 / r1, mean, directions=8)), 
-    #geoCorrection(transition(1 / (r1), mean, directions=8), type="c"), 
-    SpatialPoints(vertices[1, c('x', 'y')]),
-    SpatialPoints(vertices[18000, c('x', 'y')]),
+    #geoCorrection(transition(1 / r1, mean, directions=8)), 
+    geoCorrection(transition(1 / (r1), mean, directions=8), type="c"), 
+    xy[1],
+    xy[2],
     output='SpatialLines')
+plot(path_grid)
 ```
 
 
